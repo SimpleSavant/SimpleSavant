@@ -93,7 +93,7 @@ function barColor(value){
   if(value>=40)return '#f9abab';
   return '#f8d9d9';
 }
-// The bar represents a percentile-based score, but we NEVER display percentile
+// The bar represents a percentile-based score,
 // numbers as if they were actual measured statistics.
 function metricBlock(title,score,rows,overall,weight){
   const scoreDescription=score===null?'No ranking available':`${Math.round(score)} out of 100`;
@@ -101,8 +101,7 @@ function metricBlock(title,score,rows,overall,weight){
   const heading=`<div class="category-heading"><span>${label}</span>${!overall?`<span class="category-weight">${Math.round(weight*100)}% of overall</span>`:''}</div>`;
   let contents;
   if(overall){
-    // The overall category must show the category weights, NOT a misleading
-    // list of independent metric percentiles or raw statistics.
+    // overall category shows the category weights
     contents=`<div class="detail-title">How the overall score is calculated</div>
       <p class="detail-explainer">Each category gets a score from its available stat percentiles. The overall bar combines the category scores using these weights:</p>
       ${rows.map(g=>{

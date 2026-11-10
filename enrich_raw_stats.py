@@ -1,11 +1,6 @@
 """Add REAL season-level Baseball Savant metric values to SimpleSavant JSON.
-
-Run inside SimpleSavant (after extracting the website ZIP):
-  py -3.11 -m pip install requests
-  py -3.11 enrich_raw_stats.py --start 2021 --end 2026
-
 Uses Baseball Savant's Custom Leaderboard CSV, not pitch-by-pitch downloads.
-Matches strictly by MLBAM player_id. Never treats percentiles as raw values.
+Matches strictly by MLBAM player_id.
 All downloaded values remain missing if Baseball Savant does not return them.
 """
 import argparse
