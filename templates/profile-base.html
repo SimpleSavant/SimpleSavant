@@ -1,0 +1,30 @@
+<!-- Shared, unlinked profile template used by BOTH batting.html and pitching.html.
+     Only fetched as a fragment by js/profile.js; this is not a standalone page. -->
+<div class="profile-layout">
+  <section class="identity-column">
+    <div class="hero-art photo-placeholder"><div class="hero-hint">PLAYER BANNER PLACEHOLDER</div></div>
+    <div class="portrait photo-placeholder"><span>PLAYER<br>PHOTO</span></div>
+    <div class="identity-box">
+      <div class="player-name-row"><img id="profile-team-logo" class="profile-team-logo" alt="" hidden><h1 id="player-name">Loading player...</h1></div>
+      <p id="player-subtitle">—</p>
+    </div>
+    <div class="identity-details"><p id="bats-throws">MLB player profile</p></div>
+    <section class="summary-section">
+      <div class="section-heading"><h2>Season statistics</h2><label for="season-select">Season</label><select id="season-select" aria-label="Select season"></select></div>
+      <div id="season-stats" class="summary-table-wrap"></div>
+    </section>
+    <div class="profile-links"><span>Stats:</span><div id="season-shortcuts" class="season-shortcuts"></div><a class="glossary-link" href="#categories">View categories <span aria-hidden="true">↗</span></a></div>
+    <div class="profile-divider"></div>
+    <div class="profile-tabs"><span class="current-tab">Player Overview</span><span>Season Statistics</span><span>Percentile Rankings</span></div>
+    <p class="data-source">Season totals: MLB Stats API · Category bars: Baseball Savant / calculated percentiles · Actual advanced metrics: Baseball Savant when available</p>
+  </section>
+  <section class="rankings-column" id="categories">
+    <header class="rankings-header"><h2 id="ranking-title">MLB Percentile Rankings</h2><div class="scale"><div class="scale-title">PERCENTILE</div><div class="scale-ends"><span>LOW</span><span>HIGH</span></div></div></header>
+    <h3 id="ranking-subtitle">Simplified rankings</h3>
+    <p id="data-warning" class="data-warning" role="status" hidden></p>
+    <div class="metric-groups" id="metric-groups"></div>
+    <p class="ranking-caption">Select a category for the actual statistics and units; select Overall for category weights.</p>
+    <p class="overall-formula" id="overall-formula"></p>
+    <p class="ranking-note">Bars use percentile-based category scores. Expanded statistics show actual measured values, not percentile ranks. Missing data displays N/A and is excluded from scores.</p>
+  </section>
+</div>
