@@ -26,3 +26,33 @@
 .data-warning{padding:10px 12px;border:1px solid #d9a45d;background:#fff8ed;color:#78521e;border-radius:4px;font-size:12px;line-height:1.55}
 .data-warning[hidden]{display:none}
 @media(max-width:600px){.player-name-row .profile-team-logo{width:28px;height:28px;flex-basis:28px}.result-meta .result-team-logo{width:30px;height:30px;flex-basis:30px}}
+
+/* detail views */
+.category-link{display:block;text-decoration:none;color:inherit;padding:10px 8px;border:1px solid #dfe3e6;border-radius:6px;background:#fff;transition:box-shadow .15s}
+.category-link:hover,.category-link:focus-visible{box-shadow:0 0 0 2px var(--blue);border-color:var(--blue)}
+.category-score{font-weight:400;color:#666b70;font-size:13px;margin-left:6px}
+.category-stats{font-size:12px;color:#5c6670;margin-top:7px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.open-hint{font-weight:700;color:#2a5b8f}
+.rating-row{margin-bottom:18px}.pct-note{font-size:12px;color:#6b7279;margin-top:6px}
+.included{font-size:14px;margin:18px 0 10px;color:#30363c}
+.stat-cards{display:grid;gap:12px}
+.stat-card{border:1px solid #d3d8dd;border-radius:6px;padding:12px 14px;background:#fff}
+.stat-card-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:8px}.stat-card-head b{font-size:22px}
+.mini-scale{display:flex;align-items:center;gap:8px;font-size:11px;color:#6b7279}.mini-track{flex:1;height:14px;border:1px solid #b9c1c8;background:#fff}.mini-fill{height:100%}
+.info-button{display:inline-flex;align-items:center;gap:6px;margin-top:10px;font-size:13px;font-weight:700;color:#234f89;text-decoration:none;border:1px solid #c7d6e8;border-radius:4px;padding:5px 9px;background:#f3f8fe}
+.info-button:hover{background:#e3eefb}
+.i-badge{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:50%;background:#234f89;color:#fff;font-size:11px;font-style:italic}
+.back-nav{display:inline-block;margin-top:22px;margin-right:16px;font-size:14px;font-weight:700;color:#2a5b8f;text-decoration:none}.back-nav:hover{text-decoration:underline}
+.definition-box{border:1px solid #cfd5da;background:#f7f8f9;border-radius:6px;padding:14px 16px;font-size:15px;line-height:1.55}
+.def-meta{font-size:12px;color:#6b7279;margin-top:10px}
+.season-values div{display:flex;justify-content:space-between;border-bottom:1px solid #e6e8ea;padding:9px 0;font-size:15px}.season-values b{font-size:18px}
+.compare-button{display:block;margin-top:16px;padding:12px;text-align:center;background:#e6e9ec;border:1px solid #b9c1c8;border-radius:4px;font-weight:700;text-decoration:none;color:#111}.compare-button:hover{background:#d5e6f8}
+.related-links{display:flex;gap:10px;flex-wrap:wrap}.related-links a{display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:#234f89;font-size:14px;border:1px solid #dfe3e6;border-radius:4px;padding:5px 9px}
+.compare-pick{font-size:14px;margin-bottom:14px}.compare-pick select{padding:5px 7px;border:1px solid #c8cdd1;border-radius:4px}
+.compare-chart{border:1px solid #d3d8dd;border-radius:6px;padding:14px}
+.axis,.axis-ticks{display:flex;justify-content:space-between;font-size:11px;color:#6b7279;margin-left:58px}
+.cmp-row{display:flex;align-items:center;gap:10px;margin:10px 0}.cmp-year{width:48px;font-weight:700}
+.cmp-track{flex:1;height:34px;border:1px solid #b9c1c8;background:#fff}.cmp-fill{height:100%;background:var(--red);color:#fff;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;white-space:nowrap;min-width:fit-content}
+.compare-msg{margin-top:16px;padding:14px;border:1px solid #cfd5da;border-radius:6px;background:#f7f8f9;font-weight:700;font-size:17px;text-align:center}.compare-msg small{display:block;font-weight:400;font-size:13px;color:#555c63;margin-top:6px}
+.glossary-list{display:grid;gap:12px;max-width:820px;margin:0 auto 60px;padding:0 20px}
+.glossary-item{border:1px solid #d3d8dd;border-radius:6px;padding:14px 16px;background:#fff}.glossary-item h3{margin:0 0 6px;font-size:18px}.glossary-item p{margin:0;font-size:14px;line-height:1.5}.glossary-item small{display:block;color:#6b7279;margin-top:8px;font-size:12px}

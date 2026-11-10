@@ -1,0 +1,11 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Glossary | SimpleSavant</title><link rel="stylesheet" href="css/style.css?v=4"></head>
+<body><header class="site-header profile-site-header"><a class="brand" href="index.html" aria-label="SimpleSavant search"><span class="baseball-icon" aria-hidden="true">⚾</span><span><span class="brand-blue">Simple</span>Savant</span></a><a class="back-link" href="javascript:history.back()">← Back to Player</a></header>
+<main class="search-container" style="margin-top:40px"><h1>Baseball terms</h1><div class="search-field-wrap"><input id="search" type="search" placeholder="Search term: Hard-Hit Rate" autocomplete="off" aria-label="Search glossary" autofocus></div>
+<div id="results" class="glossary-list" style="padding:0;margin-top:24px"></div></main>
+<script src="js/common.js?v=4"></script><script>
+let terms={};const r=document.getElementById('results'),s=document.getElementById('search');
+function show(){const q=s.value.trim().toLowerCase();const items=Object.entries(terms).filter(([k,g])=>!q||g.name.toLowerCase().includes(q)||g.definition.toLowerCase().includes(q)).sort((a,b)=>a[1].name.localeCompare(b[1].name));
+r.innerHTML=items.length?items.map(([k,g])=>`<article class="glossary-item" id="${k}"><h3>${SS.escape(g.name)}</h3><p>${SS.escape(g.definition)}</p><small>Unit: ${g.unit.trim()||'ratio'} · ${g.higherIsBetter?'Higher':'Lower'} is better for hitters${g.related?.length?' · Related: '+g.related.map(x=>terms[x]?.name).filter(Boolean).join(', '):''}</small></article>`).join(''):'<p class="empty-state">No terms match.</p>';}
+SS.json('data/glossary.json').then(g=>{terms=g;show();if(location.hash)document.getElementById(location.hash.slice(1))?.scrollIntoView();});
+s.addEventListener('input',show);
+</script></body></html>

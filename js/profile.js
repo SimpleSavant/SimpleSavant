@@ -56,7 +56,7 @@ const categorySets={
   ]
 };
 const average=nums=>nums.length?nums.reduce((a,b)=>a+b,0)/nums.length:null;
-let player,selectedYear,leagueByYear={};
+let player,selectedYear,leagueByYear={},glossary={};
 
 function getPercentile(m,season,year){
   if(m.source==='league')return SS.number(leagueByYear[year]?.[player.id]?.[m.key]);
@@ -98,7 +98,14 @@ function barColor(value){
 function metricBlock(title,score,rows,overall,weight){
   const scoreDescription=score===null?'No ranking available':`${Math.round(score)} out of 100`;
   const label=SS.escape(title);
-  const heading=`<div class="category-heading"><span>${label}</span>${!overall?`<span class="category-weight">${Math.round(weight*100)}% of overall</span>`:''}</div>`;
+  const heading=`<div class="category-heading"><span>${label}${score!==null?` <span class="category-score">${Math.round(score)}th</span>`:''}</span>${!overall?`<span class="category-weight">${Math.round(weight*100)}% of overall</span>`:''}</div>`;
+  if(!overall){
+    const names=[...new Map(rows.map(m=>[m.key,m])).values()].map(m=>SS.escape(glossary[m.key]?.name||m.name)).join(' · ');
+    return `<a class="category-card category-link" href="#cat=${encodeURIComponent(title)}" aria-label="${label}: ${scoreDescription}; open details">${heading}
+      <div class="percentile-track" role="img" aria-label="${label} percentile bar">${score!==null?`<div class="percentile-fill" style="width:${Math.max(0,Math.min(100,score))}%;background:${barColor(score)}"></div>`:''}</div>
+      ${score===null?'<div class="bar-missing">Not enough data</div>':''}
+      <div class="category-stats">Includes: ${names} <span class="open-hint">Open →</span></div></a>`;
+  }
   let contents;
   if(overall){
     // overall category shows the category weights
@@ -191,16 +198,21 @@ function render(){
   document.getElementById('season-select').value=selectedYear;
   document.getElementById('bats-throws').textContent=`${mode==='pitching'?'Pitching':'Batting'} statistics · ${selectedYear}`;
   renderSummary(selectedYear);
-  renderCategories(selectedYear);
+  const h=new URLSearchParams(location.hash.slice(1));
+  if(h.get('compare'))renderCompare(h.get('compare'),h.get('a'),h.get('b'));
+  else if(h.get('stat'))renderStat(h.get('stat'),h.get('cat'));
+  else if(h.get('cat'))renderCategory(h.get('cat'));
+  else renderCategories(selectedYear);
 }
 async function init(){
   if(!id){root.innerHTML='<p class="error-state">No player selected. <a href="index.html">Search players</a></p>';return;}
   try{
     const [tpl,data]=await Promise.all([
-      fetch('templates/profile-base.html?v=3').then(r=>{if(!r.ok)throw Error('Missing template');return r.text()}),
-      SS.player(id), SS.loadTeamLogos()
+      fetch('templates/profile-base.html?v=4').then(r=>{if(!r.ok)throw Error('Missing template');return r.text()}),
+      SS.player(id), SS.loadTeamLogos(), SS.json('data/glossary.json').then(g=>{glossary=g;})
     ]);
     player=data;root.innerHTML=tpl;
+    window.addEventListener('hashchange',render);
     const years=Object.keys(player.seasons).filter(y=>player.seasons[y][mode]).sort((a,b)=>b-a);
     if(!years.length){root.innerHTML=`<div class="error-state">No ${mode} statistics available for ${SS.escape(player.name)}. <a href="index.html">Back to search</a></div>`;return;}
     selectedYear=years.includes('2025')?'2025':years[0];
@@ -212,3 +224,82 @@ async function init(){
   }catch(e){console.error(e);root.innerHTML='<div class="error-state">Could not load player data. Use a local web server and check that the data folder is present. <a href="index.html">Back to search</a></div>';}
 }
 init();
+
+// ---------- Detail views (category > stat > compare seasons) ----------
+const pitcherFlip=new Set(['chase_percent','k_percent','bb_percent','whiff_percent','exit_velocity','hard_hit_percent','brl_percent','xba']);
+function higherIsBetter(key){const g=glossary[key];if(!g)return true;return mode==='pitching'&&pitcherFlip.has(key)?!g.higherIsBetter:g.higherIsBetter;}
+function ratingLabel(score){if(score===null)return 'No rank';if(score>=90)return 'ELITE';if(score>=70)return 'Very Good';if(score>=55)return 'Good';if(score>=40)return 'Average';return 'Below Average';}
+function fmt(key,v,kind){const g=glossary[key]||{};return v===null?'N/A':rawDisplay(v,kind);}
+function findMetric(key){for(const g of categorySets[mode]){const m=g.metrics.find(m=>m.key===key);if(m)return {m,g};}return null;}
+function valueFor(key,year){const f=findMetric(key);if(!f)return {value:null};const season=player.seasons[year]||{};return {...getRaw(f.m,season),pct:getPercentile(f.m,season,year),kind:f.m.kind};}
+function statCard(m,year,cat){
+  const g=glossary[m.key]||{};const name=g.name||m.name;const v=valueFor(m.key,year);
+  const pct=v.pct;const hb=higherIsBetter(m.key);
+  const bar=pct===null?'<div class="bar-missing">No league rank for this season</div>':
+    `<div class="mini-scale"><span>Bad</span><div class="mini-track"><div class="mini-fill" style="width:${pct}%;background:${barColor(pct)}"></div></div><span>Good</span></div><div class="pct-note">${Math.round(pct)}th percentile · ${hb?'higher':'lower'} is better</div>`;
+  return `<div class="stat-card"><div class="stat-card-head"><strong>${SS.escape(name)}</strong><b>${SS.escape(fmt(m.key,v.value,m.kind))}</b></div>${bar}
+    <a class="info-button" href="#stat=${m.key}&cat=${encodeURIComponent(cat)}">What is this? <span class="i-badge">i</span></a></div>`;
+}
+function renderCategory(catName){
+  const group=categorySets[mode].find(g=>g.name===catName);
+  const col=document.getElementById('metric-groups');
+  if(!group){col.innerHTML='<p class="error-state">Unknown category.</p>';return;}
+  const season=player.seasons[selectedYear]||{};
+  const unique=[...new Map(group.metrics.map(m=>[m.key,m])).values()];
+  const score=average(unique.map(m=>getPercentile(m,season,selectedYear)).filter(v=>v!==null));
+  document.getElementById('ranking-title').textContent=`${mode==='pitching'?'Pitching':'Batting'} simplified › ${group.name}`;
+  document.getElementById('ranking-subtitle').textContent=`${group.name} rating: ${ratingLabel(score)}`;
+  col.innerHTML=`<div class="rating-row"><div class="percentile-track"><div class="percentile-fill" style="width:${score??0}%;background:${barColor(score)}"></div></div><div class="pct-note">${score===null?'No ranking available':`Average of ${unique.length} stat percentiles · ${Math.round(score)}th`}</div></div>
+    <h4 class="included">Included statistics · ${selectedYear}</h4>
+    <div class="stat-cards">${unique.map(m=>statCard(m,selectedYear,group.name)).join('')}</div>
+    <a class="back-nav" href="#">← Back to ${mode} summary</a>`;
+  document.getElementById('overall-formula').textContent='';
+}
+function prevYear(year){const ys=Object.keys(player.seasons).filter(y=>player.seasons[y][mode]&&Number(y)<Number(year)).sort();return ys.at(-1)||null;}
+function renderStat(key,cat){
+  const g=glossary[key];const f=findMetric(key);const col=document.getElementById('metric-groups');
+  if(!g||!f){col.innerHTML='<p class="error-state">No definition available.</p>';return;}
+  const prev=prevYear(selectedYear);const cur=valueFor(key,selectedYear);const old=prev?valueFor(key,prev):{value:null};
+  const hb=higherIsBetter(key);
+  document.getElementById('ranking-title').textContent=g.name;
+  document.getElementById('ranking-subtitle').textContent='Definition';
+  const related=(g.related||[]).filter(k=>findMetric(k)).map(k=>`<a href="#stat=${k}&cat=${encodeURIComponent(cat||f.g.name)}">${SS.escape(glossary[k].name)} <span class="i-badge">i</span></a>`).join('');
+  col.innerHTML=`<div class="definition-box">${SS.escape(g.definition)}<div class="def-meta">Unit: ${g.unit.trim()||'ratio'} · ${hb?'Higher':'Lower'} is better for ${mode==='pitching'?'pitchers':'hitters'} · Source: Baseball Savant / MLB Stats API</div></div>
+    <h4 class="included">${SS.escape(player.name)}</h4>
+    <div class="season-values"><div><span>${selectedYear} ${SS.escape(g.name)}</span><b>${fmt(key,cur.value,cur.kind)}</b></div>
+    ${prev?`<div><span>${prev} ${SS.escape(g.name)}</span><b>${fmt(key,old.value,old.kind)}</b></div>`:''}</div>
+    ${prev?`<a class="compare-button" href="#compare=${key}&a=${prev}&b=${selectedYear}&cat=${encodeURIComponent(cat||f.g.name)}">Compare ${prev} and ${selectedYear} ➜</a>`:''}
+    ${related?`<h4 class="included">Related</h4><div class="related-links">${related}</div>`:''}
+    <a class="back-nav" href="#cat=${encodeURIComponent(cat||f.g.name)}">← Back to ${SS.escape(cat||f.g.name)}</a>`;
+  document.getElementById('overall-formula').textContent='';
+}
+function renderCompare(key,a,b){
+  const g=glossary[key];const f=findMetric(key);const col=document.getElementById('metric-groups');
+  if(!g||!f){col.innerHTML='<p class="error-state">Cannot compare this statistic.</p>';return;}
+  const years=Object.keys(player.seasons).filter(y=>player.seasons[y][mode]).sort();
+  a=years.includes(a)?a:years.at(-2)||years[0];b=years.includes(b)?b:years.at(-1);
+  const va=valueFor(key,a),vb=valueFor(key,b);const hb=higherIsBetter(key);
+  const [lo,hi]=g.scale;const w=v=>{if(v===null)return 0;const f=(v-lo)/(hi-lo);return Math.max(2,Math.min(100,100*(hb?f:1-f)));};
+  const isPct=f.m.kind==='pct1';
+  let msg='Not enough data to compare.';
+  if(va.value!==null&&vb.value!==null){
+    const d=vb.value-va.value;const abs=Math.abs(d);
+    const amount=isPct?`${abs.toFixed(1)} percentage points`:f.m.kind==='mph1'?`${abs.toFixed(1)} mph`:f.m.kind==='decimal3'?abs.toFixed(3).replace(/^0/,''):abs.toFixed(2);
+    msg=abs<1e-9?`No change from ${a} to ${b}`:`${d>0?'Up':'Down'} ${amount} compared to ${a}`;
+    msg+=`<small>${(d>0)===hb?'This is an improvement':'This is a decline'} because ${hb?'higher':'lower'} ${SS.escape(g.name)} is better.</small>`;
+  }
+  const cat=new URLSearchParams(location.hash.slice(1)).get('cat')||f.g.name;
+  const opts=sel=>years.map(y=>`<option value="${y}"${y===sel?' selected':''}>${y}</option>`).join('');
+  document.getElementById('ranking-title').textContent=`${g.name} by season`;
+  document.getElementById('ranking-subtitle').textContent=`${player.name}`;
+  col.innerHTML=`<div class="compare-pick">Compare <select id="cmp-a">${opts(a)}</select> and <select id="cmp-b">${opts(b)}</select></div>
+    <div class="compare-chart"><div class="axis"><span>Worse</span><span>Better</span></div>
+    ${[[a,va],[b,vb]].map(([y,v])=>`<div class="cmp-row"><span class="cmp-year">${y}</span><div class="cmp-track"><div class="cmp-fill" style="width:${w(v.value)}%">${fmt(key,v.value,v.kind)}</div></div></div>`).join('')}
+    <div class="axis-ticks"><span>${rawDisplay(hb?lo:hi,f.m.kind)}</span><span>${rawDisplay(hb?hi:lo,f.m.kind)}</span></div></div>
+    <div class="compare-msg">${msg}</div>
+    <p class="pct-note">Both seasons use the same ${rawDisplay(lo,f.m.kind)}–${rawDisplay(hi,f.m.kind)} scale. ${hb?'Higher':'Lower'} ${SS.escape(g.name)} is better${hb?'':' and appears farther to the right'}.</p>
+    <a class="back-nav" href="#stat=${key}&cat=${encodeURIComponent(cat)}">← Back to ${SS.escape(g.name)}</a> <a class="back-nav" href="#">← Back to Player</a>`;
+  document.getElementById('overall-formula').textContent='';
+  const go=()=>{location.hash=`compare=${key}&a=${document.getElementById('cmp-a').value}&b=${document.getElementById('cmp-b').value}&cat=${encodeURIComponent(cat)}`;};
+  document.getElementById('cmp-a').onchange=go;document.getElementById('cmp-b').onchange=go;
+}
