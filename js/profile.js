@@ -276,32 +276,51 @@ function renderStat(key,cat){
 function renderCompare(key,a,b){
   const g=glossary[key];const f=findMetric(key);const col=document.getElementById('metric-groups');
   if(!g||!f){col.innerHTML='<p class="error-state">Cannot compare this statistic.</p>';return;}
-  const years=Object.keys(player.seasons).filter(y=>player.seasons[y][mode]).sort();
-  a=years.includes(a)?a:years.at(-2)||years[0];b=years.includes(b)?b:years.at(-1);
-  const va=valueFor(key,a),vb=valueFor(key,b);const hb=higherIsBetter(key);
-  const [lo,hi]=g.scale;const w=v=>{if(v===null)return 0;const f=(v-lo)/(hi-lo);return Math.max(2,Math.min(100,100*(hb?f:1-f)));};
-  const isPct=f.m.kind==='pct1';
-  let msg='Not enough data to compare.';
-  if(va.value!==null&&vb.value!==null){
-    const d=vb.value-va.value;const abs=Math.abs(d);
-    const amount=isPct?`${abs.toFixed(1)} percentage points`:f.m.kind==='mph1'?`${abs.toFixed(1)} mph`:f.m.kind==='decimal3'?abs.toFixed(3).replace(/^0/,''):abs.toFixed(2);
-    msg=abs<1e-9?`No change from ${a} to ${b}`:`${d>0?'Up':'Down'} ${amount} compared to ${a}`;
-    msg+=`<small>${(d>0)===hb?'This is an improvement':'This is a decline'} because ${hb?'higher':'lower'} ${SS.escape(g.name)} is better.</small>`;
-  }
   const cat=new URLSearchParams(location.hash.slice(1)).get('cat')||f.g.name;
-  const opts=sel=>years.map(y=>`<option value="${y}"${y===sel?' selected':''}>${y}</option>`).join('');
+  const years=Object.keys(player.seasons).filter(y=>player.seasons[y][mode]&&valueFor(key,y).value!==null).sort();
   document.getElementById('ranking-title').textContent=`${g.name} by season`;
-  document.getElementById('ranking-subtitle').textContent=`${player.name}`;
-  col.innerHTML=`<div class="compare-pick">Compare <select id="cmp-a">${opts(a)}</select> and <select id="cmp-b">${opts(b)}</select></div>
-    <div class="compare-chart"><div class="axis"><span>Worse</span><span>Better</span></div>
-    ${[[a,va],[b,vb]].map(([y,v])=>`<div class="cmp-row"><span class="cmp-year">${y}</span><div class="cmp-track"><div class="cmp-fill" style="width:${w(v.value)}%">${fmt(key,v.value,v.kind)}</div></div></div>`).join('')}
-    <div class="axis-ticks"><span>${rawDisplay(hb?lo:hi,f.m.kind)}</span><span>${rawDisplay(hb?hi:lo,f.m.kind)}</span></div></div>
-    <div class="compare-msg">${msg}</div>
-    <p class="pct-note">Both seasons use the same ${rawDisplay(lo,f.m.kind)}–${rawDisplay(hi,f.m.kind)} scale. ${hb?'Higher':'Lower'} ${SS.escape(g.name)} is better${hb?'':' and appears farther to the right'}.</p>
-    <a class="back-nav" href="#stat=${key}&cat=${encodeURIComponent(cat)}">← Back to ${SS.escape(g.name)}</a> <a class="back-nav" href="#">← Back to Player</a>`;
+  document.getElementById('ranking-subtitle').textContent=player.name;
   document.getElementById('overall-formula').textContent='';
-  const go=()=>{location.hash=`compare=${key}&a=${document.getElementById('cmp-a').value}&b=${document.getElementById('cmp-b').value}&cat=${encodeURIComponent(cat)}`;};
-  document.getElementById('cmp-a').onchange=go;document.getElementById('cmp-b').onchange=go;
+  if(years.length<2){
+    col.innerHTML=`<p class="error-state">Not enough season data to compare ${SS.escape(g.name)}. At least two seasons with measured values are needed.${years.length?` Available season: ${years[0]}.`:''}</p>
+      <a class="back-nav" href="#stat=${key}&cat=${encodeURIComponent(cat)}">← Back to ${SS.escape(g.name)}</a>`;
+    return;
+  }
+
+  a=years.includes(a)?a:years.at(-2);
+  b=years.includes(b)?b:years.at(-1);
+  const otherYear=(year,preferEarlier)=>{
+    const i=years.indexOf(year);
+    return years[preferEarlier?(i>0?i-1:i+1):(i<years.length-1?i+1:i-1)];
+  };
+  if(a===b)a=otherYear(b,true); // Never compare a season against itself.
+
+  const va=valueFor(key,a),vb=valueFor(key,b);const hb=higherIsBetter(key);
+  const [lo,hi]=g.scale;
+  const w=v=>Math.max(0,Math.min(100,100*(hb?(v-lo)/(hi-lo):(hi-v)/(hi-lo))));
+  const d=vb.value-va.value,abs=Math.abs(d),kind=f.m.kind;
+  const precision=kind==='decimal3'?3:(kind==='pct1'||kind==='mph1'||kind==='ft1'?1:2);
+  let change=abs.toFixed(precision);
+  if(abs>0&&Number(change)===0)change=abs.toPrecision(2);
+  if(kind==='decimal3'&&change.startsWith('0.'))change=change.slice(1);
+  const unit=kind==='pct1'?' percentage points':kind==='mph1'?' mph':kind==='ft1'?' ft':'';
+  const msg=abs<1e-9?`No change in ${SS.escape(g.name)} from ${a} to ${b}.`:
+    `${b} is ${d>0?'up':'down'} ${change}${unit} from ${a}.<small>${d*(hb?1:-1)>0?'This is an improvement':'This is a decline'} for this statistic; ${hb?'higher':'lower'} is better.</small>`;
+  const opts=sel=>years.map(y=>`<option value="${y}"${y===sel?' selected':''}>${y}</option>`).join('');
+  col.innerHTML=`<div class="compare-pick"><label for="cmp-a">From season</label> <select id="cmp-a">${opts(a)}</select> <label for="cmp-b">to season</label> <select id="cmp-b">${opts(b)}</select></div>
+    <div class="compare-chart"><div class="axis" style="margin-right:86px"><span>Worse</span><span>Better</span></div>
+    ${[[a,va],[b,vb]].map(([y,v])=>`<div class="cmp-row"><span class="cmp-year">${y}</span><div class="cmp-track" role="img" aria-label="${y}: ${SS.escape(fmt(key,v.value,v.kind))}; ${w(v.value).toFixed(0)} percent of comparison scale"><div class="cmp-fill" style="width:${w(v.value)}%;min-width:0;padding:0"></div></div><strong style="min-width:76px;text-align:right;font-size:13px">${SS.escape(fmt(key,v.value,v.kind))}</strong></div>`).join('')}
+    <div class="axis-ticks" style="margin-right:86px"><span>${rawDisplay(hb?lo:hi,kind)}</span><span>${rawDisplay(hb?hi:lo,kind)}</span></div></div>
+    <div class="compare-msg">${msg}</div>
+    <p class="pct-note">Both bars use the same ${rawDisplay(lo,kind)}–${rawDisplay(hi,kind)} scale. Longer bars mean better performance for this statistic, not an overall player rating. Only seasons with available values appear in the selectors.</p>
+    <a class="back-nav" href="#stat=${key}&cat=${encodeURIComponent(cat)}">← Back to ${SS.escape(g.name)}</a> <a class="back-nav" href="#">← Back to Player</a>`;
+  const go=changed=>{
+    let first=document.getElementById('cmp-a').value,second=document.getElementById('cmp-b').value;
+    if(first===second){if(changed==='a')second=otherYear(first,false);else first=otherYear(second,true);}
+    location.hash=`compare=${key}&a=${first}&b=${second}&cat=${encodeURIComponent(cat)}`;
+  };
+  document.getElementById('cmp-a').onchange=()=>go('a');
+  document.getElementById('cmp-b').onchange=()=>go('b');
 }
 
 // ---------- "More stats" progressive disclosure (Implication 5) ----------
