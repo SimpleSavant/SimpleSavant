@@ -1,11 +1,11 @@
-- `index.html`, `js/search.js`: search names, live result cards
-- `batting.html`, `pitching.html`, `js/profile.js`: role-specific player pages with a shared renderer
-- `templates/profile-base.html`: common profile template, not a visible page
-- `assets/teams/*-small.png`: small square logos for search results
-- `assets/teams/*-big.png`: larger square logos beside names on profiles
-- `assets/team-logos.json`: team-name-to-asset mapping (includes historical aliases for Athletics and Cleveland)
-- `css/style.css`: styling
-- `data/players.json`: searchable player index
-- `data/players/<id>.json`: individual player year/role stats and percentiles
-- `data/league-percentiles-<year>.json`: pre-existing league-derived ERA and WHIP percentiles, not official Savant ranks
-- `enrich_raw_stats.py`: optional one-time updater for real advanced metrics
+# ⚾ SimpleSavant
+
+### CS 422 — Human-Computer Interaction
+**University of Illinois Chicago (UIC)**
+
+**Team 8**  
+Duy Hung Nguyen
+Htet Yan
+Isaac Alazar
+Jackson Ferdy
+Michael Jamero
