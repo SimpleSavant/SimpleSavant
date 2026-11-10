@@ -5,7 +5,7 @@
 <script src="js/common.js?v=4"></script><script>
 let terms={};const r=document.getElementById('results'),s=document.getElementById('search');
 function show(){const q=s.value.trim().toLowerCase();const items=Object.entries(terms).filter(([k,g])=>!q||g.name.toLowerCase().includes(q)||g.definition.toLowerCase().includes(q)).sort((a,b)=>a[1].name.localeCompare(b[1].name));
-r.innerHTML=items.length?items.map(([k,g])=>`<article class="glossary-item" id="${k}"><h3>${SS.escape(g.name)}</h3><p>${SS.escape(g.definition)}</p><small>Unit: ${g.unit.trim()||'ratio'} · ${g.higherIsBetter?'Higher':'Lower'} is better for hitters${g.related?.length?' · Related: '+g.related.map(x=>terms[x]?.name).filter(Boolean).join(', '):''}</small></article>`).join(''):'<p class="empty-state">No terms match.</p>';}
+r.innerHTML=items.length?items.map(([k,g])=>`<article class="glossary-item" id="${k}"><h3>${SS.escape(g.name)}</h3><p>${SS.escape(g.definition)}</p><small>Unit: ${g.unit.trim()||'ratio'} · ${g.higherIsBetter?'Higher':'Lower'} is better for hitters${/pitcher|For pitchers/i.test(g.definition)?' (flipped for pitchers)':''}${g.related?.length?' · Related: '+g.related.map(x=>terms[x]?.name).filter(Boolean).join(', '):''}</small></article>`).join(''):'<p class="empty-state">No terms match.</p>';}
 SS.json('data/glossary.json').then(g=>{terms=g;show();if(location.hash)document.getElementById(location.hash.slice(1))?.scrollIntoView();});
 s.addEventListener('input',show);
 </script></body></html>

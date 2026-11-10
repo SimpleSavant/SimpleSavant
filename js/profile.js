@@ -171,7 +171,7 @@ function renderSummary(year){
     const stats=player.seasons[y]?.[mode]||{};
     return `<tr><th scope="row">${y}</th>${fields.map(([,key])=>`<td>${SS.escape(SS.printable(stats[key]))}</td>`).join('')}</tr>`;
   }).join('');
-  document.getElementById('season-stats').innerHTML=`<table class="summary-table"><thead><tr><th scope="col">Season</th>${columns}</tr></thead><tbody>${rows||'<tr><td colspan="4">No statistics available</td></tr>'}</tbody></table>`;
+  document.getElementById('season-stats').innerHTML=`<table class="summary-table"><thead><tr><th scope="col">Season</th>${columns}</tr></thead><tbody>${rows||'<tr><td colspan="4">No statistics available</td></tr>'}</tbody></table>${moreStatsHtml(years)}`;
   const shortcuts=Object.keys(player.seasons).filter(y=>player.seasons[y][mode]).sort((a,b)=>b-a).slice(0,6);
   document.getElementById('season-shortcuts').innerHTML=shortcuts.map(y=>`<button class="season-chip${year===y?' active':''}" data-year="${y}" type="button">${y}</button>`).join('');
   document.querySelectorAll('.season-chip').forEach(b=>b.addEventListener('click',async()=>{
@@ -302,4 +302,32 @@ function renderCompare(key,a,b){
   document.getElementById('overall-formula').textContent='';
   const go=()=>{location.hash=`compare=${key}&a=${document.getElementById('cmp-a').value}&b=${document.getElementById('cmp-b').value}&cat=${encodeURIComponent(cat)}`;};
   document.getElementById('cmp-a').onchange=go;document.getElementById('cmp-b').onchange=go;
+}
+
+// ---------- "More stats" progressive disclosure (Implication 5) ----------
+const moreStatSets={
+  batting:[
+    {title:'Playing time',rows:[['Games','gamesPlayed'],['Plate appearances','plateAppearances'],['At-bats','atBats']]},
+    {title:'Hitting',rows:[['Hits','hits'],['Doubles','doubles'],['Triples','triples'],['Runs','runs'],['RBI','rbi'],['Stolen bases','stolenBases'],['OBP','obp'],['SLG','slg']]},
+    {title:'Strikeouts & walks',rows:[['Strikeouts','strikeOuts'],['Walks','baseOnBalls'],['Strikeout rate (K%)',(b,r)=>r.k_percent,'%'],['Walk rate (BB%)',(b,r)=>r.bb_percent,'%']]}
+  ],
+  pitching:[
+    {title:'Workload',rows:[['Wins – Losses',b=>`${b.wins??'—'}–${b.losses??'—'}`],['Games / Starts',b=>`${b.gamesPitched??'—'} / ${b.gamesStarted??'—'}`],['Innings pitched','inningsPitched'],['Saves','saves']]},
+    {title:'Strikeouts & walks',rows:[['Strikeouts','strikeOuts'],['Walks','baseOnBalls'],['K per 9 innings','strikeoutsPer9Inn'],['BB per 9 innings','walksPer9Inn'],['Strikeout-to-walk ratio','strikeoutWalkRatio'],['Strikeout rate (K%)',(b,r)=>r.k_percent,'%'],['Walk rate (BB%)',(b,r)=>r.bb_percent,'%']]},
+    {title:'Contact allowed',rows:[['Hits allowed','hits'],['Home runs allowed','homeRuns'],['Opponent batting average','avg'],['Ground ball rate',(b,r)=>r.groundballs_percent,'%']]}
+  ]
+};
+function moreStatsHtml(years){
+  if(!years.length)return '';
+  const cell=(row,y)=>{
+    const [,src,unit]=row;const season=player.seasons[y]||{};const base=season[mode]||{};const raw=season[mode+'_raw']||{};
+    let v=typeof src==='function'?src(base,raw):base[src];
+    if(typeof v==='number'&&unit==='%')v=v.toFixed(1)+'%';
+    return `<td>${SS.escape(SS.printable(v))}</td>`;
+  };
+  const head=`<tr><th scope="col">Stat</th>${years.map(y=>`<th scope="col">${y}</th>`).join('')}</tr>`;
+  const body=moreStatSets[mode].map(g=>`<tr class="more-group"><th colspan="${years.length+1}">${g.title}</th></tr>`+g.rows.map(r=>`<tr><th scope="row">${SS.escape(r[0])}</th>${years.map(y=>cell(r,y)).join('')}</tr>`).join('')).join('');
+  return `<details class="more-stats"${location.hash.includes("more")?" open":""}><summary>More stats <span class="more-hint">strikeouts, walks, ${mode==='pitching'?'innings, K/9':'OBP, SLG, runs'} …</span></summary>
+    <table class="summary-table more-table"><thead>${head}</thead><tbody>${body}</tbody></table>
+    <p class="pct-note">Season totals from the MLB Stats API. Rates (K%, BB%${mode==='pitching'?', ground ball rate':''}) from Baseball Savant.</p></details>`;
 }
