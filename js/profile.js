@@ -190,6 +190,18 @@ function render(){
   const team=season[mode==='pitching'?'pitching_team':'hitting_team']||'MLB';
   document.getElementById('player-name').textContent=player.name;
   document.getElementById('player-subtitle').textContent=`${team} | ${mode==='pitching'?'Pitcher':'Batter'}`;
+  const photo = document.getElementById('player-photo');
+
+  photo.src = `https://img.mlbstatic.com/mlb-photos/image/upload/w_640,q_auto:best/v1/people/${id}/headshot/67/current`;
+  
+  photo.onerror = () => {
+    photo.style.display = 'none';
+  };
+  
+  photo.onload = () => {
+    photo.style.display = 'block';
+  };
+  
   document.title=`${player.name} · ${mode==='pitching'?'Pitching':'Batting'} | SimpleSavant`;
   const img=document.getElementById('profile-team-logo');
   const logo=SS.logo(team,'big');
