@@ -237,3 +237,16 @@ summary.pair-summary:focus-visible{outline:2px solid var(--blue);outline-offset:
   .verdict-score{font-size:17px}
   .header-link{font-size:12px;padding:6px 9px}
 }
+
+/* ---------- profile section tabs ---------- */
+.profile-tab{background:none;border:0;border-bottom:3px solid transparent;padding:8px 4px;min-height:36px;font:inherit;color:#30363c;cursor:pointer}
+.profile-tab:hover{color:#234f89;border-bottom-color:#c7d6e8}
+.profile-tab.current-tab{font-weight:700;color:var(--black);border-bottom-color:#434950}
+.profile-tab:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.jump-target:focus{outline:none}
+.summary-section,.rankings-header,.identity-box{scroll-margin-top:12px}
+@keyframes section-flash{0%{box-shadow:0 0 0 3px var(--blue);background-color:#eef5fe}100%{box-shadow:0 0 0 3px rgba(119,183,248,0);background-color:transparent}}
+.section-flash{animation:section-flash 1.4s ease-out}
+.identity-box.section-flash{animation-name:section-flash-box}
+@keyframes section-flash-box{0%{box-shadow:0 0 0 3px var(--blue)}100%{box-shadow:0 0 0 3px rgba(119,183,248,0)}}
+@media (prefers-reduced-motion: reduce){.section-flash,.identity-box.section-flash{animation-duration:.01s}}

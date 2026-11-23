@@ -137,13 +137,14 @@ async function init(){
   if(!id){root.innerHTML='<p class="error-state">No player selected. <a href="index.html">Search players</a></p>';return;}
   try{
     const [tpl,data]=await Promise.all([
-      fetch('templates/profile-base.html?v=5').then(r=>{if(!r.ok)throw Error('Missing template');return r.text()}),
+      fetch('templates/profile-base.html?v=6').then(r=>{if(!r.ok)throw Error('Missing template');return r.text()}),
       SS.player(id), SS.loadTeamLogos(), SS.json('data/glossary.json').then(g=>{glossary=g;})
     ]);
     player=data;root.innerHTML=tpl;
     window.addEventListener('hashchange',render);
     Stats.initExplain({glossary:()=>glossary,mode:()=>mode});
     SS.bindStars();
+    bindSectionTabs();
     // Favorites can change on another page; refresh when returning via Back.
     window.addEventListener('pageshow',e=>{if(e.persisted&&player)SS.syncStars(player.id);});
     const years=Object.keys(player.seasons).filter(y=>player.seasons[y][mode]).sort((a,b)=>b-a);
@@ -282,4 +283,32 @@ function moreStatsHtml(years){
   return `<details class="more-stats"${location.hash.includes("more")?" open":""}><summary>More stats <span class="more-hint">strikeouts, walks, ${mode==='pitching'?'innings, K/9':'OBP, SLG, runs'} …</span></summary>
     <table class="summary-table more-table"><thead>${head}</thead><tbody>${body}</tbody></table>
     <p class="pct-note">Season totals from the MLB Stats API. Rates (K%, BB%${mode==='pitching'?', ground ball rate':''}) from Baseball Savant.</p></details>`;
+}
+
+// ---------- Section tabs (Player Overview / Season Statistics / Percentile Rankings) ----------
+// Jump links, like Baseball Savant's profile nav. They are buttons, not #links,
+// because the URL hash already drives the category/stat views above.
+// The target section flashes so the jump is noticeable even when both
+// columns are already on screen (desktop).
+function bindSectionTabs(){
+  const tabs=[...document.querySelectorAll('.profile-tab')];
+  const behavior=()=>window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth';
+  const sections={
+    'player-overview':{scroll:()=>window.scrollTo({top:0,behavior:behavior()}),flash:'.identity-box',focus:'#player-name'},
+    'season-statistics':{scroll:'.summary-section',flash:'.summary-section',focus:'.summary-section h2',
+      before:()=>{const more=document.querySelector('.more-stats');if(more)more.open=true;}},
+    'percentile-rankings':{scroll:'#categories',flash:'.rankings-header',focus:'#ranking-title'}
+  };
+  tabs.forEach(tab=>tab.addEventListener('click',()=>{
+    const s=sections[tab.dataset.section];if(!s)return;
+    tabs.forEach(t=>{const on=t===tab;t.classList.toggle('current-tab',on);if(on)t.setAttribute('aria-current','true');else t.removeAttribute('aria-current');});
+    if(s.before)s.before();
+    if(typeof s.scroll==='function')s.scroll();
+    else document.querySelector(s.scroll)?.scrollIntoView({behavior:behavior(),block:'start'});
+    // Move keyboard/screen-reader focus to the section heading without a second scroll.
+    const heading=document.querySelector(s.focus);
+    if(heading){heading.setAttribute('tabindex','-1');heading.classList.add('jump-target');heading.focus({preventScroll:true});}
+    const flash=document.querySelector(s.flash);
+    if(flash){flash.classList.remove('section-flash');void flash.offsetWidth;flash.classList.add('section-flash');}
+  }));
 }

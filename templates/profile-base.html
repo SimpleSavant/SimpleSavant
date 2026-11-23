@@ -19,7 +19,11 @@
     </section>
     <div class="profile-links"><span>Stats:</span><div id="season-shortcuts" class="season-shortcuts"></div><a class="glossary-link" href="glossary.html">Glossary <span aria-hidden="true">?</span></a></div>
     <div class="profile-divider"></div>
-    <div class="profile-tabs"><span class="current-tab">Player Overview</span><span>Season Statistics</span><span>Percentile Rankings</span></div>
+    <nav class="profile-tabs" aria-label="Jump to a section of this profile">
+      <button type="button" class="profile-tab current-tab" data-section="player-overview" aria-current="true">Player Overview</button>
+      <button type="button" class="profile-tab" data-section="season-statistics">Season Statistics</button>
+      <button type="button" class="profile-tab" data-section="percentile-rankings">Percentile Rankings</button>
+    </nav>
     <p class="data-source">Season totals: MLB Stats API · Category bars: Baseball Savant / calculated percentiles · Actual advanced metrics: Baseball Savant when available</p>
   </section>
   <section class="rankings-column" id="categories">
