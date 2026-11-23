@@ -7,6 +7,10 @@
     <div class="identity-box">
       <div class="player-name-row"><img id="profile-team-logo" class="profile-team-logo" alt="" hidden><h1 id="player-name">Loading player...</h1></div>
       <p id="player-subtitle">—</p>
+      <div class="profile-actions">
+        <span id="favorite-slot"></span>
+        <a id="compare-player" class="compare-player-btn" href="compare.html"><span aria-hidden="true">⇄</span> Compare with another player</a>
+      </div>
     </div>
     <div class="identity-details"><p id="bats-throws">MLB player profile</p></div>
     <section class="summary-section">
@@ -19,7 +23,7 @@
     <p class="data-source">Season totals: MLB Stats API · Category bars: Baseball Savant / calculated percentiles · Actual advanced metrics: Baseball Savant when available</p>
   </section>
   <section class="rankings-column" id="categories">
-    <header class="rankings-header"><h2 id="ranking-title">MLB Percentile Rankings</h2><div class="scale"><div class="scale-title">PERCENTILE</div><div class="scale-ends"><span>LOW</span><span>HIGH</span></div></div></header>
+    <header class="rankings-header"><h2 id="ranking-title">MLB Percentile Rankings</h2><div class="scale"><div class="scale-title">PERCENTILE <button type="button" class="explain-btn" data-explain="percentile" aria-label="What is a percentile?" aria-expanded="false" aria-haspopup="dialog">i</button></div><div class="scale-ends"><span>LOW</span><span>HIGH</span></div></div></header>
     <h3 id="ranking-subtitle">Simplified rankings</h3>
     <p id="data-warning" class="data-warning" role="status" hidden></p>
     <div class="metric-groups" id="metric-groups"></div>

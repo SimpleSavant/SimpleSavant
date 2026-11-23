@@ -1,0 +1,17 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Compare players | SimpleSavant</title><link rel="stylesheet" href="css/style.css?v=5"></head>
+<body><header class="site-header profile-site-header"><a class="brand" href="index.html" aria-label="SimpleSavant search"><span class="baseball-icon" aria-hidden="true">⚾</span><span><span class="brand-blue">Simple</span>Savant</span></a><a class="back-link" href="index.html">← Back to search</a></header>
+<main class="compare-page">
+  <h1>Compare players</h1>
+  <p class="compare-intro">Pick two batters or two pitchers. Each player can use a different season.</p>
+  <div class="role-toggle" role="group" aria-label="Type of player to compare">
+    <button type="button" data-role="batting" aria-pressed="true">Batters</button><button type="button" data-role="pitching" aria-pressed="false">Pitchers</button>
+  </div>
+  <div class="compare-slots">
+    <section class="slot" id="slot-a" aria-label="Player 1"></section>
+    <button type="button" class="swap-btn" id="swap" aria-label="Swap player 1 and player 2" title="Swap players"><span aria-hidden="true">⇄</span></button>
+    <section class="slot" id="slot-b" aria-label="Player 2"></section>
+  </div>
+  <p id="compare-status" class="compare-status" role="status" aria-live="polite"></p>
+  <div id="compare-results"><p class="loading">Loading player index...</p></div>
+</main>
+<script src="js/common.js?v=5"></script><script src="js/stats.js?v=5"></script><script src="js/compare.js?v=5"></script></body></html>

@@ -4,104 +4,27 @@ const mode=location.pathname.toLowerCase().endsWith('pitching.html')?'pitching':
 const id=new URLSearchParams(location.search).get('id');
 const root=document.getElementById('profile-root');
 
-// Weights describe the contribution of each CATEGORY to the overall bar,
-// not the contribution of individual raw units (ERA, mph, percentages).
-const categorySets={
-  batting:[
-    {name:'Power',weight:.40,metrics:[
-      {name:'Expected Slugging (xSLG)',key:'xslg',raw:'xslg',kind:'decimal3'},
-      {name:'Barrel%',key:'brl_percent',raw:'barrel_batted_rate',kind:'pct1'},
-      {name:'Hard-Hit%',key:'hard_hit_percent',raw:'hard_hit_percent',kind:'pct1'}
-    ]},
-    {name:'Contact Ability',weight:.40,metrics:[
-      {name:'Expected Batting Average (xBA)',key:'xba',raw:'xba',kind:'decimal3'},
-      {name:'Expected wOBA',key:'xwoba',raw:'xwoba',kind:'decimal3'},
-      {name:'Squared-Up Rate',key:'squared_up_rate',raw:'squared_up_swing',kind:'pct1'}
-    ]},
-    {name:'Plate Discipline',weight:.10,metrics:[
-      {name:'Chase%',key:'chase_percent',raw:'oz_swing_percent',kind:'pct1'},
-      {name:'Strikeout%',key:'k_percent',raw:'k_percent',kind:'pct1',fallback:'strikeouts'},
-      {name:'Walk (BB)%',key:'bb_percent',raw:'bb_percent',kind:'pct1',fallback:'walks'},
-      {name:'Whiff%',key:'whiff_percent',raw:'whiff_percent',kind:'pct1'}
-    ]},
-    {name:'Swing Quality',weight:.10,metrics:[
-      {name:'Bat Speed',key:'bat_speed',raw:'avg_swing_speed',kind:'mph1'},
-      {name:'Average Exit Velocity',key:'exit_velocity',raw:'exit_velocity_avg',kind:'mph1'},
-      {name:'Squared-Up Rate',key:'squared_up_rate',raw:'squared_up_swing',kind:'pct1'}
-    ]}
-  ],
-  pitching:[
-    {name:'Run Prevention',weight:.40,metrics:[
-      {name:'xERA',desc:'Expected Earned Run Average',key:'xera',raw:'xera',kind:'decimal2'},
-      {name:'xBA',desc:'Expected Batting Average allowed',key:'xba',raw:'xba',kind:'decimal3'},
-      {name:'WHIP',desc:'Walks + Hits per Inning Pitched',key:'whip',kind:'decimal2',source:'league',fallback:'whip'},
-      {name:'ERA',desc:'Earned Run Average',key:'era',kind:'decimal2',source:'league',fallback:'era'}
-    ]},
-    {name:'Contact Management',weight:.25,metrics:[
-      {name:'Average Exit Velocity',key:'exit_velocity',raw:'exit_velocity_avg',kind:'mph1'},
-      {name:'Hard-Hit%',key:'hard_hit_percent',raw:'hard_hit_percent',kind:'pct1'},
-      {name:'Barrel%',key:'brl_percent',raw:'barrel_batted_rate',kind:'pct1'},
-      {name:'GB%',desc:'Ground Ball Percentage',key:'gb',raw:'groundballs_percent',kind:'pct1',source:'extra'}
-    ]},
-    {name:'Throwing Control',weight:.25,metrics:[
-      {name:'Chase%',key:'chase_percent',raw:'oz_swing_percent',kind:'pct1'},
-      {name:'Strikeout%',key:'k_percent',raw:'k_percent',kind:'pct1',fallback:'strikeouts'},
-      {name:'Walk (BB)%',key:'bb_percent',raw:'bb_percent',kind:'pct1',fallback:'walks'},
-      {name:'Whiff%',key:'whiff_percent',raw:'whiff_percent',kind:'pct1'}
-    ]},
-    {name:'Pitching Quality',weight:.10,metrics:[
-      {name:'Fastball Velocity',key:'fb_velocity',raw:'velocity',kind:'mph1'},
-      {name:'Extension',key:'extension',raw:'release_extension',kind:'ft1',source:'extra'}
-    ]}
-  ]
-};
-const average=nums=>nums.length?nums.reduce((a,b)=>a+b,0)/nums.length:null;
+// Category definitions, scoring and number formatting live in js/stats.js so the
+// comparison page scores players exactly the same way. Thin wrappers keep the
+// names this file has always used.
+const categorySets=Stats.categories;
+const average=Stats.average;
 let player,selectedYear,leagueByYear={},glossary={};
 
-function getPercentile(m,season,year){
-  if(m.source==='league')return SS.number(leagueByYear[year]?.[player.id]?.[m.key]);
-  if(m.source==='extra')return SS.number(season.pitching_extra_percentiles?.[m.key]);
-  return SS.number(season[mode+'_percentiles']?.[m.key]);
-}
-function getRaw(m,season){
-  const raw=SS.number(season[mode+'_raw']?.[m.raw]);
-  if(raw!==null)return {value:raw,source:'Baseball Savant'};
-  const base=season[mode]||{};
-  if(m.fallback==='era')return {value:SS.number(base.ERA??base.era),source:'MLB Stats API'};
-  if(m.fallback==='whip')return {value:SS.number(base.WHIP??base.whip),source:'MLB Stats API'};
-  if(m.fallback==='strikeouts'||m.fallback==='walks'){
-    // Strikeout rate and walk rate use PA for hitters, batters faced for pitchers.
-    const denom=SS.number(mode==='batting'?base.plateAppearances:base.battersFaced);
-    const numerator=SS.number(m.fallback==='strikeouts'?(base.strikeOuts??base.SO):(base.baseOnBalls??base.BB));
-    return {value:denom&&numerator!==null?100*numerator/denom:null,source:'Calculated from MLB season totals'};
-  }
-  return {value:null,source:'Measured value unavailable in this season dataset'};
-}
-function rawDisplay(value,kind){
-  if(value===null)return 'N/A';
-  if(kind==='decimal3')return Number(value).toFixed(3).replace(/^0(?=\.)/,'');
-  if(kind==='decimal2')return Number(value).toFixed(2);
-  if(kind==='pct1')return Number(value).toFixed(1)+'%';
-  if(kind==='mph1')return Number(value).toFixed(1)+' mph';
-  if(kind==='ft1')return Number(value).toFixed(1)+' ft';
-  return String(value);
-}
-function barColor(value){
-  if(value===null)return '#d4d8dd';
-  if(value>=80)return '#e9282d';
-  if(value>=60)return '#f37779';
-  if(value>=40)return '#f9abab';
-  return '#f8d9d9';
-}
+function getPercentile(m,season,year){return Stats.percentile(mode,player.id,m,season,leagueByYear[year]);}
+function getRaw(m,season){return Stats.raw(mode,m,season);}
+function rawDisplay(value,kind){return Stats.display(value,kind);}
+function barColor(value){return Stats.barColor(value);}
 // The bar represents a percentile-based score,
 // numbers as if they were actual measured statistics.
-function metricBlock(title,score,rows,overall,weight){
+function metricBlock(title,score,rows,overall,weight,desc){
   const scoreDescription=score===null?'No ranking available':`${Math.round(score)} out of 100`;
   const label=SS.escape(title);
-  const heading=`<div class="category-heading"><span>${label}${score!==null?` <span class="category-score">${Math.round(score)}th</span>`:''}</span>${!overall?`<span class="category-weight">${Math.round(weight*100)}% of overall</span>`:''}</div>`;
+  const heading=`<div class="category-heading"><span>${label}${score!==null?` <span class="category-score">${Stats.ordinal(Math.round(score))}</span>`:''}</span>${!overall?`<span class="category-weight">${Math.round(weight*100)}% of overall</span>`:''}</div>`;
   if(!overall){
     const names=[...new Map(rows.map(m=>[m.key,m])).values()].map(m=>SS.escape(glossary[m.key]?.name||m.name)).join(' · ');
     return `<a class="category-card category-link" href="#cat=${encodeURIComponent(title)}" aria-label="${label}: ${scoreDescription}; open details">${heading}
+      ${desc?`<p class="category-desc">${SS.escape(desc)}</p>`:''}
       <div class="percentile-track" role="img" aria-label="${label} percentile bar">${score!==null?`<div class="percentile-fill" style="width:${Math.max(0,Math.min(100,score))}%;background:${barColor(score)}"></div>`:''}</div>
       ${score===null?'<div class="bar-missing">Not enough data</div>':''}
       <div class="category-stats">Includes: ${names} <span class="open-hint">Open →</span></div></a>`;
@@ -135,21 +58,12 @@ function metricBlock(title,score,rows,overall,weight){
   </details>`;
 }
 function renderCategories(year){
-  const season=player.seasons[year]||{};
-  const groups=categorySets[mode].map(g=>{
-    const rows=g.metrics.map(m=>({...m,score:getPercentile(m,season,year)}));
-    // Don't allow a stat that belongs to two groups to count twice inside
-    // a single group; each group is the simple average of its own metrics.
-    const unique=new Map(rows.map(m=>[m.key,m]));
-    return {...g,rows,score:average([...unique.values()].map(m=>m.score).filter(v=>v!==null))};
-  });
-  const valid=groups.filter(g=>g.score!==null);
-  const totalWeight=valid.reduce((s,g)=>s+g.weight,0);
-  const overallScore=totalWeight?valid.reduce((s,g)=>s+g.score*g.weight,0)/totalWeight:null;
+  // Shared with the comparison page (see Stats.score in js/stats.js).
+  const {groups,overall:overallScore}=Stats.score(mode,player,year,leagueByYear[year]);
   const label=mode==='pitching'?'Overall Pitching':'Overall Hitting';
   document.getElementById('metric-groups').innerHTML=
     metricBlock(label,overallScore,groups,true,1)+
-    groups.map(g=>metricBlock(g.name,g.score,g.rows,false,g.weight)).join('');
+    groups.map(g=>metricBlock(g.name,g.score,g.rows,false,g.weight,g.desc)).join('');
   document.getElementById('ranking-title').textContent=`${year} MLB Percentile Rankings`;
   document.getElementById('ranking-subtitle').textContent=mode==='pitching'?'Pitching simplified':'Batting simplified';
   const formula=groups.map(g=>`${g.name} ${Math.round(g.weight*100)}%`).join(' · ');
@@ -165,8 +79,9 @@ function renderCategories(year){
 }
 function renderSummary(year){
   const years=Object.keys(player.seasons).filter(y=>Number(y)<=Number(year)&&player.seasons[y][mode]).sort((a,b)=>b-a).slice(0,2).reverse();
-  const fields=mode==='pitching'?[['ERA','ERA'],['IP','IP'],['WHIP','WHIP']]:[['Avg','AVG'],['HR','HR'],['OPS','OPS']];
-  const columns=fields.map(([label])=>`<th scope="col">${label}</th>`).join('');
+  // [column label, stat field, glossary key for the "i" explanation]
+  const fields=mode==='pitching'?[['ERA','ERA','era'],['IP','IP','ip'],['WHIP','WHIP','whip']]:[['Avg','AVG','avg'],['HR','HR','hr'],['OPS','OPS','ops']];
+  const columns=fields.map(([label,,key])=>`<th scope="col"><span class="th-explain">${label}${Stats.explainButton(key,glossary[key]?.name||label)}</span></th>`).join('');
   const rows=years.map(y=>{
     const stats=player.seasons[y]?.[mode]||{};
     return `<tr><th scope="row">${y}</th>${fields.map(([,key])=>`<td>${SS.escape(SS.printable(stats[key]))}</td>`).join('')}</tr>`;
@@ -209,6 +124,8 @@ function render(){
   else{img.hidden=true;img.removeAttribute('src');}
   document.getElementById('season-select').value=selectedYear;
   document.getElementById('bats-throws').textContent=`${mode==='pitching'?'Pitching':'Batting'} statistics · ${selectedYear}`;
+  document.getElementById('favorite-slot').innerHTML=SS.starButton({id:player.id,name:player.name,role:mode},true);
+  document.getElementById('compare-player').href=`compare.html?role=${mode}&a=${encodeURIComponent(player.id)}&ya=${selectedYear}`;
   renderSummary(selectedYear);
   const h=new URLSearchParams(location.hash.slice(1));
   if(h.get('compare'))renderCompare(h.get('compare'),h.get('a'),h.get('b'));
@@ -220,11 +137,15 @@ async function init(){
   if(!id){root.innerHTML='<p class="error-state">No player selected. <a href="index.html">Search players</a></p>';return;}
   try{
     const [tpl,data]=await Promise.all([
-      fetch('templates/profile-base.html?v=4').then(r=>{if(!r.ok)throw Error('Missing template');return r.text()}),
+      fetch('templates/profile-base.html?v=5').then(r=>{if(!r.ok)throw Error('Missing template');return r.text()}),
       SS.player(id), SS.loadTeamLogos(), SS.json('data/glossary.json').then(g=>{glossary=g;})
     ]);
     player=data;root.innerHTML=tpl;
     window.addEventListener('hashchange',render);
+    Stats.initExplain({glossary:()=>glossary,mode:()=>mode});
+    SS.bindStars();
+    // Favorites can change on another page; refresh when returning via Back.
+    window.addEventListener('pageshow',e=>{if(e.persisted&&player)SS.syncStars(player.id);});
     const years=Object.keys(player.seasons).filter(y=>player.seasons[y][mode]).sort((a,b)=>b-a);
     if(!years.length){root.innerHTML=`<div class="error-state">No ${mode} statistics available for ${SS.escape(player.name)}. <a href="index.html">Back to search</a></div>`;return;}
     selectedYear=years.includes('2025')?'2025':years[0];
@@ -238,9 +159,8 @@ async function init(){
 init();
 
 // ---------- Detail views (category > stat > compare seasons) ----------
-const pitcherFlip=new Set(['chase_percent','k_percent','bb_percent','whiff_percent','exit_velocity','hard_hit_percent','brl_percent','xba']);
-function higherIsBetter(key){const g=glossary[key];if(!g)return true;return mode==='pitching'&&pitcherFlip.has(key)?!g.higherIsBetter:g.higherIsBetter;}
-function ratingLabel(score){if(score===null)return 'No rank';if(score>=90)return 'ELITE';if(score>=70)return 'Very Good';if(score>=55)return 'Good';if(score>=40)return 'Average';return 'Below Average';}
+function higherIsBetter(key){return Stats.higherIsBetter(glossary,key,mode);}
+function ratingLabel(score){return Stats.ratingLabel(score);}
 function fmt(key,v,kind){const g=glossary[key]||{};return v===null?'N/A':rawDisplay(v,kind);}
 function findMetric(key){for(const g of categorySets[mode]){const m=g.metrics.find(m=>m.key===key);if(m)return {m,g};}return null;}
 function valueFor(key,year){const f=findMetric(key);if(!f)return {value:null};const season=player.seasons[year]||{};return {...getRaw(f.m,season),pct:getPercentile(f.m,season,year),kind:f.m.kind};}
@@ -248,7 +168,7 @@ function statCard(m,year,cat){
   const g=glossary[m.key]||{};const name=g.name||m.name;const v=valueFor(m.key,year);
   const pct=v.pct;const hb=higherIsBetter(m.key);
   const bar=pct===null?'<div class="bar-missing">No league rank for this season</div>':
-    `<div class="mini-scale"><span>Bad</span><div class="mini-track"><div class="mini-fill" style="width:${pct}%;background:${barColor(pct)}"></div></div><span>Good</span></div><div class="pct-note">${Math.round(pct)}th percentile · ${hb?'higher':'lower'} is better</div>`;
+    `<div class="mini-scale"><span>Bad</span><div class="mini-track"><div class="mini-fill" style="width:${pct}%;background:${barColor(pct)}"></div></div><span>Good</span></div><div class="pct-note">${Stats.ordinal(Math.round(pct))} percentile · ${hb?'higher':'lower'} is better</div>`;
   return `<div class="stat-card"><div class="stat-card-head"><strong>${SS.escape(name)}</strong><b>${SS.escape(fmt(m.key,v.value,m.kind))}</b></div>${bar}
     <a class="info-button" href="#stat=${m.key}&cat=${encodeURIComponent(cat)}">What is this? <span class="i-badge">i</span></a></div>`;
 }
@@ -261,7 +181,7 @@ function renderCategory(catName){
   const score=average(unique.map(m=>getPercentile(m,season,selectedYear)).filter(v=>v!==null));
   document.getElementById('ranking-title').textContent=`${mode==='pitching'?'Pitching':'Batting'} simplified › ${group.name}`;
   document.getElementById('ranking-subtitle').textContent=`${group.name} rating: ${ratingLabel(score)}`;
-  col.innerHTML=`<div class="rating-row"><div class="percentile-track"><div class="percentile-fill" style="width:${score??0}%;background:${barColor(score)}"></div></div><div class="pct-note">${score===null?'No ranking available':`Average of ${unique.length} stat percentiles · ${Math.round(score)}th`}</div></div>
+  col.innerHTML=`${group.desc?`<p class="category-desc category-desc-lead">${SS.escape(group.desc)}</p>`:''}<div class="rating-row"><div class="percentile-track"><div class="percentile-fill" style="width:${score??0}%;background:${barColor(score)}"></div></div><div class="pct-note">${score===null?'No ranking available':`Average of ${unique.length} stat percentiles · ${Stats.ordinal(Math.round(score))}`}</div></div>
     <h4 class="included">Included statistics · ${selectedYear}</h4>
     <div class="stat-cards">${unique.map(m=>statCard(m,selectedYear,group.name)).join('')}</div>
     <a class="back-nav" href="#">← Back to ${mode} summary</a>`;
@@ -336,16 +256,17 @@ function renderCompare(key,a,b){
 }
 
 // ---------- "More stats" progressive disclosure (Implication 5) ----------
+// Row: [label, stat field or function(base, savantRaw), unit, glossary key for "i"]
 const moreStatSets={
   batting:[
-    {title:'Playing time',rows:[['Games','gamesPlayed'],['Plate appearances','plateAppearances'],['At-bats','atBats']]},
-    {title:'Hitting',rows:[['Hits','hits'],['Doubles','doubles'],['Triples','triples'],['Runs','runs'],['RBI','rbi'],['Stolen bases','stolenBases'],['OBP','obp'],['SLG','slg']]},
-    {title:'Strikeouts & walks',rows:[['Strikeouts','strikeOuts'],['Walks','baseOnBalls'],['Strikeout rate (K%)',(b,r)=>r.k_percent,'%'],['Walk rate (BB%)',(b,r)=>r.bb_percent,'%']]}
+    {title:'Playing time',rows:[['Games','gamesPlayed',null,'games'],['Plate appearances','plateAppearances',null,'pa'],['At-bats','atBats',null,'ab']]},
+    {title:'Hitting',rows:[['Hits','hits',null,'hits'],['Doubles','doubles',null,'doubles'],['Triples','triples',null,'triples'],['Runs','runs',null,'runs'],['RBI','rbi',null,'rbi'],['Stolen bases','stolenBases',null,'sb'],['OBP','obp',null,'obp'],['SLG','slg',null,'slg']]},
+    {title:'Strikeouts & walks',rows:[['Strikeouts','strikeOuts',null,'strikeouts'],['Walks','baseOnBalls',null,'walks'],['Strikeout rate (K%)',(b,r)=>r.k_percent,'%','k_percent'],['Walk rate (BB%)',(b,r)=>r.bb_percent,'%','bb_percent']]}
   ],
   pitching:[
-    {title:'Workload',rows:[['Wins – Losses',b=>`${b.wins??'—'}–${b.losses??'—'}`],['Games / Starts',b=>`${b.gamesPitched??'—'} / ${b.gamesStarted??'—'}`],['Innings pitched','inningsPitched'],['Saves','saves']]},
-    {title:'Strikeouts & walks',rows:[['Strikeouts','strikeOuts'],['Walks','baseOnBalls'],['K per 9 innings','strikeoutsPer9Inn'],['BB per 9 innings','walksPer9Inn'],['Strikeout-to-walk ratio','strikeoutWalkRatio'],['Strikeout rate (K%)',(b,r)=>r.k_percent,'%'],['Walk rate (BB%)',(b,r)=>r.bb_percent,'%']]},
-    {title:'Contact allowed',rows:[['Hits allowed','hits'],['Home runs allowed','homeRuns'],['Opponent batting average','avg'],['Ground ball rate',(b,r)=>r.groundballs_percent,'%']]}
+    {title:'Workload',rows:[['Wins – Losses',b=>`${b.wins??'—'}–${b.losses??'—'}`,null,'wl'],['Games / Starts',b=>`${b.gamesPitched??'—'} / ${b.gamesStarted??'—'}`,null,'g_gs'],['Innings pitched','inningsPitched',null,'ip'],['Saves','saves',null,'saves']]},
+    {title:'Strikeouts & walks',rows:[['Strikeouts','strikeOuts',null,'strikeouts'],['Walks','baseOnBalls',null,'walks'],['K per 9 innings','strikeoutsPer9Inn',null,'k9'],['BB per 9 innings','walksPer9Inn',null,'bb9'],['Strikeout-to-walk ratio','strikeoutWalkRatio',null,'kbb'],['Strikeout rate (K%)',(b,r)=>r.k_percent,'%','k_percent'],['Walk rate (BB%)',(b,r)=>r.bb_percent,'%','bb_percent']]},
+    {title:'Contact allowed',rows:[['Hits allowed','hits',null,'hits_allowed'],['Home runs allowed','homeRuns',null,'hr_allowed'],['Opponent batting average','avg',null,'opp_avg'],['Ground ball rate',(b,r)=>r.groundballs_percent,'%','gb']]}
   ]
 };
 function moreStatsHtml(years){
@@ -357,7 +278,7 @@ function moreStatsHtml(years){
     return `<td>${SS.escape(SS.printable(v))}</td>`;
   };
   const head=`<tr><th scope="col">Stat</th>${years.map(y=>`<th scope="col">${y}</th>`).join('')}</tr>`;
-  const body=moreStatSets[mode].map(g=>`<tr class="more-group"><th colspan="${years.length+1}">${g.title}</th></tr>`+g.rows.map(r=>`<tr><th scope="row">${SS.escape(r[0])}</th>${years.map(y=>cell(r,y)).join('')}</tr>`).join('')).join('');
+  const body=moreStatSets[mode].map(g=>`<tr class="more-group"><th colspan="${years.length+1}">${g.title}</th></tr>`+g.rows.map(r=>`<tr><th scope="row"><span class="th-explain">${SS.escape(r[0])}${r[3]&&glossary[r[3]]?Stats.explainButton(r[3],glossary[r[3]].name):''}</span></th>${years.map(y=>cell(r,y)).join('')}</tr>`).join('')).join('');
   return `<details class="more-stats"${location.hash.includes("more")?" open":""}><summary>More stats <span class="more-hint">strikeouts, walks, ${mode==='pitching'?'innings, K/9':'OBP, SLG, runs'} …</span></summary>
     <table class="summary-table more-table"><thead>${head}</thead><tbody>${body}</tbody></table>
     <p class="pct-note">Season totals from the MLB Stats API. Rates (K%, BB%${mode==='pitching'?', ground ball rate':''}) from Baseball Savant.</p></details>`;

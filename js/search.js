@@ -16,7 +16,7 @@ function rowHtml(entry,role,team){
     '<span class="team-logo-placeholder" aria-hidden="true">MLB</span>';
   const subline=team?`${SS.escape(team)} · ${role==='pitching'?'Pitcher':'Batter'}`:
     `${role==='pitching'?'Pitcher':'Batter'} · ${SS.escape(entry.seasons.at(-1)||'')}`;
-  return `<article class="result-card" data-id="${SS.escape(entry.id)}"><div class="result-photo photo-placeholder"><span>PHOTO</span></div><div class="result-info"><h3>${SS.escape(entry.name)}</h3><div class="result-meta">${logoHtml}<span class="team-role">${subline}</span></div></div><a class="view-button" href="${url}" aria-label="View ${SS.escape(entry.name)} profile">View <span aria-hidden="true">→</span></a></article>`;
+  return `<article class="result-card" data-id="${SS.escape(entry.id)}"><div class="result-photo photo-placeholder"><span>PHOTO</span></div><div class="result-info"><div class="result-name-row"><h3>${SS.escape(entry.name)}</h3>${SS.starButton({id:entry.id,name:entry.name,role})}</div><div class="result-meta">${logoHtml}<span class="team-role">${subline}</span></div></div><a class="view-button" href="${url}" aria-label="View ${SS.escape(entry.name)} profile">View <span aria-hidden="true">→</span></a></article>`;
 }
 async function searchResults(){
   const seq=++rendering;
@@ -41,6 +41,17 @@ async function searchResults(){
     }catch(e){console.warn('Unable to load player card',entry.id,e);}
   }));
 }
+// Favorites row: quick links to starred players, kept in sync with every star button.
+const favoritesEl=document.querySelector('#favorites');
+function renderFavorites(){
+  const favs=SS.favorites.all();
+  favoritesEl.innerHTML=favs.length?favs.map(f=>`<span class="fav-chip"><a href="${SS.profileUrl(f.id,f.role)}">${SS.escape(f.name)} <small>${f.role==='pitching'?'Pitcher':'Batter'}</small></a>${SS.starButton(f)}</span>`).join(''):
+    '<p class="fav-empty">No favorites yet. Select <span aria-hidden="true">☆</span><span class="visually-hidden">the star</span> on a player to keep them here.</p>';
+}
+SS.bindStars(()=>renderFavorites());
+renderFavorites();
+// Returning with Back can restore a cached page; re-read favorites in case they changed.
+window.addEventListener('pageshow',e=>{if(!e.persisted)return;renderFavorites();document.querySelectorAll('#results .star-toggle').forEach(b=>SS.syncStars(b.dataset.favId));});
 searchEl.addEventListener('input',()=>{clearTimeout(debounce);debounce=setTimeout(searchResults,100)});
 searchEl.addEventListener('keydown',e=>{if(e.key==='Enter'){const url=resultsEl.querySelector('.view-button')?.href;if(url)location.href=url;}});
 Promise.all([SS.json('data/players.json'),SS.loadTeamLogos()]).then(([data])=>{entries=data;searchResults()}).catch(err=>{
